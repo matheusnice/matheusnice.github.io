@@ -1,6 +1,6 @@
 ---
 title: "Benchmarking Regression Algorithms"
-date: 2023-01-08T10:00:00-03:00
+date: 2023-01-08T00:00:00-03:00
 categories:
   - blog
 tags:
@@ -21,7 +21,7 @@ For data preprocessing, let's simply create:
 X = train_set.drop('SalePrice', axis=1)
 y = train_set['SalePrice'].copy()
 
-at_cols = list(X.select_dtypes('object').columns)
+cat_cols = list(X.select_dtypes('object').columns)
 num_cols = list(X.select_dtypes(np.number).columns)
 
 num_pipe = Pipeline([
@@ -43,7 +43,7 @@ X_tr = preprocessor.fit_transform(X)
 ```
 
 Now we will define our benchmark that will evaluate the model using cross validation and return the results as a list.
-The scoring metrics that were chosen here are the RMSE and R2
+The scoring metrics that were chosen here are the RMSE and $$R^2$$
 
 ```python
 cv = ShuffleSplit(n_splits=5, test_size=0.2)
@@ -131,6 +131,15 @@ def plot_benchmark_results():
         )
 ```
 
-![image-center]({{ site.url }}{{ site.baseurl }}/assets/images/regression-plot.png){: .align-center}
+Results:
+<figure style="width: 1200px">
+  <img src="{{ site.url }}{{ site.baseurl }}/assets/images/regression-plot.png" alt="">
+  <figcaption>A plot with the benchmark results</figcaption>
+</figure> 
+
+For this particular test, we could see that the `GradientBoostingRegressor` was the model with best performance on both of the metrics evaluated.
+
+The notebook with the full benchmark can be found [here][notebook].
 
 [house-data]: https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques
+[notebook]: https://github.com/matheusnice/benchmarking-regression-models/blob/main/benchmark-regression-models.ipynb
