@@ -1,5 +1,5 @@
 ---
-title: "Benchmarking Regression"
+title: "Benchmarking Regression Algorithms"
 date: 2023-01-08T10:00:00-03:00
 categories:
   - blog
@@ -8,7 +8,42 @@ tags:
   - Regression
 ---
 
-Benchmarking regression algorithms using `sklearn` and `python`
+In this post, I'm going to show how we can create a benchmark to evaluate regression models in terms of runtime and quality of the results.
+For this benchmark, we will use the `House Prices - Advanced Regression Techniques` dataset available [here][house-data].
+
+This dataset contains both numeric and categorical features, but we're not going to worry about EDA or feature engineering, since our goal here is to provide a framework that can be used to evaluate different models.
+
+For data preprocessing, let's simply create:
+- A numeric pipeline that will fill the missing values with `0` and apply a `StandardScaler` transformer
+- A categorical pipeline that will fill the missing values with `'NA'` and apply a `OneHotEncoder` transformer
+
+```python
+X = train_set.drop('SalePrice', axis=1)
+y = train_set['SalePrice'].copy()
+
+at_cols = list(X.select_dtypes('object').columns)
+num_cols = list(X.select_dtypes(np.number).columns)
+
+num_pipe = Pipeline([
+    ('num_imputer', SimpleImputer(strategy='constant', fill_value=0)),
+    ('scaler', StandardScaler())
+])
+
+cat_pipe = Pipeline([
+    ('cat_imputer', SimpleImputer(strategy='constant', fill_value='NA')),
+    ('onehotencode', OneHotEncoder())
+])
+
+preprocessor = ColumnTransformer([
+    ('num_pipe', num_pipe, num_cols),
+    ('cat_pipe', cat_pipe, cat_cols)
+])
+
+X_tr = preprocessor.fit_transform(X)
+```
+
+Now we will define our benchmark that will evaluate the model using cross validation and return the results as a list.
+The scoring metrics that were chosen here are the RMSE and R2
 
 ```python
 cv = ShuffleSplit(n_splits=5, test_size=0.2)
@@ -29,8 +64,73 @@ def bench_regressor(model, X, y, cv):
     return [name, fit_time, rmse, r2]
 ```
 
-Check out the [Jekyll docs][jekyll-docs] for more info on how to get the most out of Jekyll. File all bugs/feature requests at [Jekyll’s GitHub repo][jekyll-gh]. If you have questions, you can ask them on [Jekyll Talk][jekyll-talk].
+Now, let's run the benchmark and compare four approaches
+- LinearRegression
+- DecisionTreeRegressor
+- GradientBoostingRegressor
+- RandomForestRegressor
 
-[jekyll-docs]: https://jekyllrb.com/docs/home
-[jekyll-gh]:   https://github.com/jekyll/jekyll
-[jekyll-talk]: https://talk.jekyllrb.com/
+```python
+estimators = [
+    LinearRegression(),
+    DecisionTreeRegressor(),
+    GradientBoostingRegressor(),
+    RandomForestRegressor(),
+]
+
+results = []
+
+for estimator in estimators:
+    model_results = bench_regressor(estimator, X_tr, y, cv=cv)
+    results.append(model_results)
+```
+
+Finally, let's plot and visualize the results.
+
+```python
+def plot_benchmark_results():
+    
+    df = pd.DataFrame(results, columns=['name', 'fit_time', 'rmse', 'r2'])
+    
+    fig, ax = plt.subplots(1, 3, figsize=(13,3), sharey=True)
+
+    ax[0].grid()
+    bars = ax[0].barh(df.name, df.fit_time, color='r', alpha=0.6)
+    ax[0].set_title('fit time (s)')
+    for bar in bars:
+        width = bar.get_width()
+        ax[0].text(
+            width/2,
+            bar.get_y() + bar.get_height()/2,
+            f'{round(width, 1)}s',
+            fontsize=11
+        )
+
+    ax[1].grid()
+    bars = ax[1].barh(df.name, df.rmse, color='g', alpha=0.6)
+    ax[1].set_title('RMSE')
+    for bar in bars:
+        width = bar.get_width()
+        ax[1].text(
+            width/2,
+            bar.get_y() + bar.get_height()/2,
+            f'{int(width)}',
+            fontsize=11
+        )
+
+    ax[2].grid()
+    bars = ax[2].barh(df.name, df.r2, alpha=0.6)
+    ax[2].set_title('$R^2$')
+    for bar in bars:
+        width = bar.get_width()
+        ax[2].text(
+            width/2,
+            bar.get_y() + bar.get_height()/2,
+            f'{round(width, 1)}',
+            fontsize=11
+        )
+```
+
+![image-center]({{ site.url }}{{ site.baseurl }}/assets/images/regression-plot.png){: .align-center}
+
+[house-data]: https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques
