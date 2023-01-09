@@ -1,5 +1,5 @@
 ---
-title: "Benchmarking Regression Algorithms"
+title: "Benchmarking Regression Models"
 date: 2023-01-08T00:00:00-03:00
 categories:
   - blog
@@ -43,7 +43,7 @@ X_tr = preprocessor.fit_transform(X)
 ```
 
 Now we will define our benchmark that will evaluate the model using cross validation and return the results as a list.
-The scoring metrics that were chosen here are the RMSE and $$R^2$$
+The scoring metrics that were chosen here are the RMSE and R2
 
 ```python
 cv = ShuffleSplit(n_splits=5, test_size=0.2)
